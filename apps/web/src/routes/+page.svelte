@@ -1,4 +1,4 @@
-<main class="mx-auto max-w-3xl px-6 py-20">
-	<h1 class="text-4xl font-bold tracking-tight">TEG Web</h1>
-	<p class="mt-4 text-lg text-muted-foreground">Single-page web app is ready.</p>
-</main>
+<section class="mx-auto max-w-5xl space-y-4">
+	<h1 class="text-3xl font-bold tracking-tight">Dashboard</h1>
+	<p class="text-muted-foreground">Security posture, trends, and open work across your org.</p>
+</section>
