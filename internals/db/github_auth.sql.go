@@ -19,6 +19,94 @@ func (q *Queries) DeleteUserRepositories(ctx context.Context, userID int64) erro
 	return err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, github_id, login, name, email, avatar_url, created_at, updated_at
+FROM users
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.GithubID,
+		&i.Login,
+		&i.Name,
+		&i.Email,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserOAuthToken = `-- name: GetUserOAuthToken :one
+SELECT id, user_id, provider, access_token, created_at, updated_at
+FROM user_oauth_tokens
+WHERE user_id = $1
+  AND provider = $2
+LIMIT 1
+`
+
+type GetUserOAuthTokenParams struct {
+	UserID   int64  `json:"user_id"`
+	Provider string `json:"provider"`
+}
+
+func (q *Queries) GetUserOAuthToken(ctx context.Context, arg GetUserOAuthTokenParams) (UserOauthToken, error) {
+	row := q.db.QueryRow(ctx, getUserOAuthToken, arg.UserID, arg.Provider)
+	var i UserOauthToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.AccessToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listUserRepositories = `-- name: ListUserRepositories :many
+SELECT id, user_id, github_repo_id, name, full_name, private, default_branch, html_url, created_at, updated_at
+FROM repositories
+WHERE user_id = $1
+ORDER BY name
+`
+
+func (q *Queries) ListUserRepositories(ctx context.Context, userID int64) ([]Repository, error) {
+	rows, err := q.db.Query(ctx, listUserRepositories, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Repository
+	for rows.Next() {
+		var i Repository
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.GithubRepoID,
+			&i.Name,
+			&i.FullName,
+			&i.Private,
+			&i.DefaultBranch,
+			&i.HtmlUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertGitHubUser = `-- name: UpsertGitHubUser :one
 INSERT INTO users (
     github_id,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -24,12 +25,18 @@ type GitHubUser struct {
 }
 
 type GitHubRepository struct {
-	ID            int64  `json:"id"`
-	Name          string `json:"name"`
-	FullName      string `json:"full_name"`
-	Private       bool   `json:"private"`
-	DefaultBranch string `json:"default_branch"`
-	HTMLURL       string `json:"html_url"`
+	ID              int64  `json:"id"`
+	Name            string `json:"name"`
+	FullName        string `json:"full_name"`
+	Private         bool   `json:"private"`
+	DefaultBranch   string `json:"default_branch"`
+	HTMLURL         string `json:"html_url"`
+	Description     string `json:"description"`
+	Language        string `json:"language"`
+	StargazersCount int    `json:"stargazers_count"`
+	ForksCount      int    `json:"forks_count"`
+	OpenIssuesCount int    `json:"open_issues_count"`
+	UpdatedAt       string `json:"updated_at"`
 }
 
 type githubEmail struct {
@@ -41,6 +48,28 @@ type githubEmail struct {
 type githubAccessTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	Error       string `json:"error"`
+}
+
+type GitHubAPIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *GitHubAPIError) Error() string {
+	if e.Body == "" {
+		return fmt.Sprintf("github api request failed with status %d", e.StatusCode)
+	}
+
+	return fmt.Sprintf("github api request failed with status %d: %s", e.StatusCode, e.Body)
+}
+
+func newGitHubAPIError(resp *http.Response) error {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &GitHubAPIError{StatusCode: resp.StatusCode}
+	}
+
+	return &GitHubAPIError{StatusCode: resp.StatusCode, Body: strings.TrimSpace(string(body))}
 }
 
 func ExchangeGitHubCode(ctx context.Context, clientID, clientSecret, code, redirectURI string) (string, error) {
@@ -102,7 +131,7 @@ func GetGitHubUser(ctx context.Context, accessToken string) (*GitHubUser, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("github user request failed with status %d", resp.StatusCode)
+		return nil, newGitHubAPIError(resp)
 	}
 
 	var user GitHubUser
@@ -137,7 +166,7 @@ func GetGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, err
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("github emails request failed with status %d", resp.StatusCode)
+		return "", newGitHubAPIError(resp)
 	}
 
 	var emails []githubEmail
@@ -179,8 +208,9 @@ func ListGitHubUserRepositories(ctx context.Context, accessToken string) ([]GitH
 		}
 
 		if resp.StatusCode != http.StatusOK {
+			err := newGitHubAPIError(resp)
 			_ = resp.Body.Close()
-			return nil, fmt.Errorf("github repositories request failed with status %d", resp.StatusCode)
+			return nil, err
 		}
 
 		var pageRepos []GitHubRepository

@@ -20,5 +20,13 @@ func registerRoutes(r chi.Router, h *Handler) {
 
 		r.Get("/auth/github/login", h.githubLogin)
 		r.Get("/auth/github/callback", h.githubCallback)
+
+		r.Group(func(r chi.Router) {
+			r.Use(h.authMiddleware)
+			r.Get("/me", h.me)
+			r.Get("/github/repositories", h.githubRepositories)
+			r.Get("/github/repositories/{repoID}", h.githubRepositoryByID)
+			r.Post("/github/repositories/{repoID}/connect", h.connectGitHubRepository)
+		})
 	})
 }

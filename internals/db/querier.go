@@ -10,6 +10,9 @@ import (
 
 type Querier interface {
 	DeleteUserRepositories(ctx context.Context, userID int64) error
+	GetUserByID(ctx context.Context, id int64) (User, error)
+	GetUserOAuthToken(ctx context.Context, arg GetUserOAuthTokenParams) (UserOauthToken, error)
+	ListUserRepositories(ctx context.Context, userID int64) ([]Repository, error)
 	UpsertGitHubUser(ctx context.Context, arg UpsertGitHubUserParams) (User, error)
 	UpsertRepository(ctx context.Context, arg UpsertRepositoryParams) error
 	UpsertUserOAuthToken(ctx context.Context, arg UpsertUserOAuthTokenParams) error
