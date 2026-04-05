@@ -10,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -78,6 +80,19 @@ type connectGitHubRepositoryResponse struct {
 	RepoID        int64  `json:"repo_id"`
 	InstallNeeded bool   `json:"install_needed,omitempty"`
 	RedirectURL   string `json:"redirect_url,omitempty"`
+}
+
+type dependencyFileResponse struct {
+	Path     string `json:"path"`
+	File     string `json:"file"`
+	Manager  string `json:"manager"`
+	Registry string `json:"registry"`
+}
+
+type dependencyFilesResponse struct {
+	RepositoryID int64                    `json:"repository_id"`
+	FullName     string                   `json:"full_name"`
+	Files        []dependencyFileResponse `json:"files"`
 }
 
 func NewHandler(cfg *internal.Config, redisClient *adapters.Redis, queries *db.Queries) *Handler {
@@ -210,6 +225,58 @@ func (h *Handler) upsertConnectedRepository(ctx context.Context, userID int64, r
 		DefaultBranch: repo.DefaultBranch,
 		HtmlUrl:       repo.HTMLURL,
 	})
+}
+
+func (h *Handler) installationTokenForRepo(ctx context.Context, userID, repoID int64) (string, *adapters.GitHubRepository, error) {
+	appIssuer, err := h.appIssuer()
+	if err != nil {
+		return "", nil, err
+	}
+
+	installations, err := h.queries.ListUserGitHubInstallations(ctx, userID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	for _, installation := range installations {
+		token, tokenErr := adapters.CreateInstallationAccessToken(ctx, appIssuer, h.cfg.GithubAppPrivateKey, installation.InstallationID)
+		if tokenErr != nil {
+			continue
+		}
+
+		repository, repoErr := adapters.GetRepositoryByID(ctx, token, repoID)
+		if repoErr == nil {
+			return token, repository, nil
+		}
+	}
+
+	return "", nil, fmt.Errorf("no installation access for repository")
+}
+
+func dependencyManagerForFile(fileName string) string {
+	switch strings.ToLower(fileName) {
+	case "package.json":
+		return "npm"
+	case "requirements.txt":
+		return "pip"
+	case "go.mod":
+		return "go"
+	default:
+		return ""
+	}
+}
+
+func registryForManager(manager string) string {
+	switch strings.ToLower(strings.TrimSpace(manager)) {
+	case "npm":
+		return "npm"
+	case "pip":
+		return "pypi"
+	case "go":
+		return "github"
+	default:
+		return "unknown"
+	}
 }
 
 func queryInt(raw string, fallback int) int {
@@ -659,6 +726,87 @@ func (h *Handler) githubRepositoryByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "repository not found", http.StatusNotFound)
+}
+
+func (h *Handler) githubRepositoryDependencyFiles(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	repoIDText := chi.URLParam(r, "repoID")
+	repoID, err := strconv.ParseInt(repoIDText, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid repository id", http.StatusBadRequest)
+		return
+	}
+
+	connectedRepos, err := h.queries.ListUserRepositories(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "failed to fetch connected repositories", http.StatusInternalServerError)
+		return
+	}
+
+	connected := false
+	for _, repo := range connectedRepos {
+		if repo.GithubRepoID == repoID {
+			connected = true
+			break
+		}
+	}
+	if !connected {
+		http.Error(w, "repository is not connected", http.StatusNotFound)
+		return
+	}
+
+	installationToken, repository, err := h.installationTokenForRepo(r.Context(), userID, repoID)
+	if err != nil {
+		http.Error(w, "github app installation access not found for repository", http.StatusForbidden)
+		return
+	}
+
+	owner, repoName, ok := strings.Cut(repository.FullName, "/")
+	if !ok || strings.TrimSpace(owner) == "" || strings.TrimSpace(repoName) == "" {
+		http.Error(w, "invalid repository full name", http.StatusBadGateway)
+		return
+	}
+
+	tree, err := adapters.ListRepositoryTree(r.Context(), installationToken, owner, repoName, repository.DefaultBranch)
+	if err != nil {
+		http.Error(w, "failed to fetch repository tree", http.StatusBadGateway)
+		return
+	}
+
+	dependencyFiles := make([]dependencyFileResponse, 0)
+	for _, entry := range tree {
+		if entry.Type != "blob" {
+			continue
+		}
+
+		name := path.Base(entry.Path)
+		manager := dependencyManagerForFile(name)
+		if manager == "" {
+			continue
+		}
+
+		dependencyFiles = append(dependencyFiles, dependencyFileResponse{
+			Path:     entry.Path,
+			File:     name,
+			Manager:  manager,
+			Registry: registryForManager(manager),
+		})
+	}
+
+	sort.Slice(dependencyFiles, func(i, j int) bool {
+		return dependencyFiles[i].Path < dependencyFiles[j].Path
+	})
+
+	writeJSON(w, http.StatusOK, dependencyFilesResponse{
+		RepositoryID: repoID,
+		FullName:     repository.FullName,
+		Files:        dependencyFiles,
+	})
 }
 
 func (h *Handler) connectGitHubRepository(w http.ResponseWriter, r *http.Request) {
