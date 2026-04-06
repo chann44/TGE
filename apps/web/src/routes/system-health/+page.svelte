@@ -95,6 +95,7 @@
 		/>
 		<StatCard label="Queue Backlog" value={summary.queue_backlog ?? 0} />
 		<StatCard label="Dependency Sync Throughput" value={`${summary.dependency_sync_throughput_1h ?? 0}/h`} />
+		<StatCard label="Scan Throughput" value={`${summary.scan_throughput_1h ?? 0}/h`} />
 		<StatCard label="Version" value={summary.version ?? 'unknown'} />
 	</section>
 

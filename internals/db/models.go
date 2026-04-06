@@ -295,6 +295,64 @@ type RepositoryDependencySync struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
+type RepositoryScanFinding struct {
+	ID              int64              `json:"id"`
+	ScanRunID       int64              `json:"scan_run_id"`
+	RepositoryID    int64              `json:"repository_id"`
+	PolicyID        pgtype.Int8        `json:"policy_id"`
+	PackageID       pgtype.Int8        `json:"package_id"`
+	PackageName     string             `json:"package_name"`
+	Manager         string             `json:"manager"`
+	Registry        string             `json:"registry"`
+	VersionSpec     string             `json:"version_spec"`
+	ResolvedVersion string             `json:"resolved_version"`
+	AdvisoryID      string             `json:"advisory_id"`
+	Aliases         []string           `json:"aliases"`
+	Title           string             `json:"title"`
+	Summary         string             `json:"summary"`
+	Severity        Severity           `json:"severity"`
+	FixedVersion    string             `json:"fixed_version"`
+	ReferenceUrl    string             `json:"reference_url"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RepositoryScanFindingSource struct {
+	FindingID        int64              `json:"finding_id"`
+	Source           string             `json:"source"`
+	ProviderRecordID string             `json:"provider_record_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type RepositoryScanLog struct {
+	ID            int64              `json:"id"`
+	ScanRunID     int64              `json:"scan_run_id"`
+	RepositoryID  int64              `json:"repository_id"`
+	Level         string             `json:"level"`
+	Message       string             `json:"message"`
+	DirectoryPath string             `json:"directory_path"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type RepositoryScanRun struct {
+	ID               int64              `json:"id"`
+	RepositoryID     int64              `json:"repository_id"`
+	PolicyID         pgtype.Int8        `json:"policy_id"`
+	Trigger          string             `json:"trigger"`
+	Status           string             `json:"status"`
+	ErrorMessage     string             `json:"error_message"`
+	FindingsTotal    int32              `json:"findings_total"`
+	FindingsCritical int32              `json:"findings_critical"`
+	FindingsHigh     int32              `json:"findings_high"`
+	FindingsMedium   int32              `json:"findings_medium"`
+	FindingsLow      int32              `json:"findings_low"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ServiceStatusSnapshot struct {
 	ID        int64              `json:"id"`
 	Service   string             `json:"service"`

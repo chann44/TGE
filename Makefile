@@ -3,13 +3,14 @@ SHELL := /bin/sh
 GOOSE_DIR := sql/migrations
 SQLC_CONFIG := sqlc.yaml
 
-.PHONY: help api-dev worker-dev web-dev dev test fmt codegen migrate-up migrate-down migrate-status migrate-reset migrate-create
+.PHONY: help api-dev worker-dev scheduler-dev web-dev dev test fmt codegen migrate-up migrate-down migrate-status migrate-reset migrate-create
 
 help:
 	@printf "Available targets:\n"
 	@printf "  make api-dev           Run Go API server\n"
 	@printf "  make web-dev           Run Svelte web dev server\n"
 	@printf "  make worker-dev        Run dependency worker\n"
+	@printf "  make scheduler-dev     Run scheduled scan dispatcher\n"
 	@printf "  make dev               Run API + web + worker dev servers\n"
 	@printf "  make test              Run Go tests\n"
 	@printf "  make fmt               Format Go code\n"
@@ -29,11 +30,15 @@ web-dev:
 worker-dev:
 	go run ./apps/worker
 
+scheduler-dev:
+	go run ./apps/scheduler
+
 dev:
 	@set -e; \
 	trap 'kill 0' INT TERM EXIT; \
 	go run ./apps/api & \
 	go run ./apps/worker & \
+	go run ./apps/scheduler & \
 	npm --prefix apps/web run dev & \
 	wait
 

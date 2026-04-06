@@ -67,11 +67,28 @@ export const load: PageServerLoad = async ({ cookies, fetch, params, url }) => {
 
 	const policy = (await policyRes.json()) as PolicyDetail;
 	const reposPayload = reposRes.ok ? (((await reposRes.json()) as RepositoriesResponse) ?? {}) : {};
+	const envGHSAConfigured = String(process.env.GHSA_API_TOKEN ?? '').trim().length > 0;
+	const envNVDConfigured = String(process.env.NVD_API_KEY ?? '').trim().length > 0;
+	const policyGHSAConfigured = String(policy.sources?.ghsa_token_ref ?? '').trim().length > 0;
+	const policyNVDConfigured = String(policy.sources?.nvd_api_key_ref ?? '').trim().length > 0;
 
 	return {
 		policy,
 		repositories: (reposPayload.repositories ?? []).filter((repo) => repo.connected),
-		flashMessage: url.searchParams.get('created') === '1' ? 'Policy created successfully.' : ''
+		flashMessage: url.searchParams.get('created') === '1' ? 'Policy created successfully.' : '',
+		sourceHealth: {
+			osv: { enabled: policy.sources?.osv_enabled === true, configured: true },
+			ghsa: {
+				enabled: policy.sources?.ghsa_enabled === true,
+				configured: policyGHSAConfigured || envGHSAConfigured,
+				configuredBy: policyGHSAConfigured ? 'policy' : envGHSAConfigured ? 'env' : 'none'
+			},
+			nvd: {
+				enabled: policy.sources?.nvd_enabled === true,
+				configured: policyNVDConfigured || envNVDConfigured,
+				configuredBy: policyNVDConfigured ? 'policy' : envNVDConfigured ? 'env' : 'none'
+			}
+		}
 	};
 };
 
@@ -236,6 +253,42 @@ export const actions: Actions = {
 		}
 
 		return { action: 'unassignRepo', success: true, message: 'Repository unassigned.' };
+	},
+
+	runScan: async ({ cookies, fetch, request, params }) => {
+		const session = cookies.get('session');
+		if (!session) throw redirect(302, '/auth');
+
+		const form = await request.formData();
+		const repoID = Number(String(form.get('repo_id') ?? '').trim());
+		if (!repoID || repoID <= 0) {
+			return fail(400, {
+				action: 'runScan',
+				success: false,
+				message: 'Select a repository to run scan.'
+			});
+		}
+
+		const response = await fetch(`${API_BASE_URL}/v1/policies/${params.policyId}/scans/run`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${session}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ repo_id: repoID })
+		});
+
+		if (response.status === 401) throw redirect(302, '/auth');
+		if (!response.ok) {
+			const errorText = (await response.text()).trim();
+			return fail(response.status, {
+				action: 'runScan',
+				success: false,
+				message: errorText || 'Failed to queue scan.'
+			});
+		}
+
+		return { action: 'runScan', success: true, message: 'Scan run queued.' };
 	},
 
 	deletePolicy: async ({ cookies, fetch, params }) => {

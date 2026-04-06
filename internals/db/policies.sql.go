@@ -542,6 +542,59 @@ func (q *Queries) ListPolicyTriggersByPolicy(ctx context.Context, policyID int64
 	return items, nil
 }
 
+const listScheduledPolicyRepositoryTargets = `-- name: ListScheduledPolicyRepositoryTargets :many
+SELECT
+    p.user_id,
+    p.id AS policy_id,
+    pt.id AS trigger_id,
+    pt.cron,
+    pt.timezone,
+    r.github_repo_id
+FROM policies p
+INNER JOIN policy_triggers pt ON pt.policy_id = p.id
+INNER JOIN policy_repositories pr ON pr.policy_id = p.id
+INNER JOIN repositories r ON r.id = pr.repository_id
+WHERE p.enabled = TRUE
+  AND pt.type = 'schedule'::trigger_type
+ORDER BY p.id, pt.id, r.github_repo_id
+`
+
+type ListScheduledPolicyRepositoryTargetsRow struct {
+	UserID       int64       `json:"user_id"`
+	PolicyID     int64       `json:"policy_id"`
+	TriggerID    int64       `json:"trigger_id"`
+	Cron         pgtype.Text `json:"cron"`
+	Timezone     string      `json:"timezone"`
+	GithubRepoID int64       `json:"github_repo_id"`
+}
+
+func (q *Queries) ListScheduledPolicyRepositoryTargets(ctx context.Context) ([]ListScheduledPolicyRepositoryTargetsRow, error) {
+	rows, err := q.db.Query(ctx, listScheduledPolicyRepositoryTargets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListScheduledPolicyRepositoryTargetsRow
+	for rows.Next() {
+		var i ListScheduledPolicyRepositoryTargetsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.PolicyID,
+			&i.TriggerID,
+			&i.Cron,
+			&i.Timezone,
+			&i.GithubRepoID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setPolicyEnabledByIDAndUser = `-- name: SetPolicyEnabledByIDAndUser :one
 UPDATE policies
 SET enabled = $3,

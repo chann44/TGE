@@ -182,10 +182,48 @@ export const actions: Actions = {
 			queued: payload.queued === true,
 			syncStatus: payload.status ?? 'queued',
 			syncId: payload.sync_id ?? null,
+			action: 'fetchDeps',
 			message:
 				payload.queued === true
 					? null
 					: 'Dependencies already fetched. Skipping re-fetch.'
+		};
+	},
+
+	runScan: async ({ cookies, fetch, params }) => {
+		const session = cookies.get('session');
+		if (!session) {
+			throw redirect(302, '/auth');
+		}
+
+		const response = await fetch(`${API_BASE_URL}/v1/github/repositories/${params.repoId}/scans/run`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${session}`
+			}
+		});
+
+		if (response.status === 401) {
+			throw redirect(302, '/auth');
+		}
+
+		if (!response.ok) {
+			const message = (await response.text()).trim();
+			return fail(response.status, {
+				action: 'runScan',
+				success: false,
+				message: message || 'Failed to queue scan run.'
+			});
+		}
+
+		const payload = (await response.json()) as { queued?: boolean; status?: string; scan_id?: number };
+		return {
+			action: 'runScan',
+			success: true,
+			queued: payload.queued === true,
+			scanStatus: payload.status ?? 'queued',
+			scanId: payload.scan_id ?? null,
+			message: payload.queued === true ? 'Scan run queued.' : 'Scan request accepted.'
 		};
 	}
 };

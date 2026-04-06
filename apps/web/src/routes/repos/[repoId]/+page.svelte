@@ -422,9 +422,15 @@
 </script>
 
 <div class="soc-page">
-	{#if form && typeof form === 'object' && 'queued' in form && form.queued}
+	{#if form && typeof form === 'object' && form.action === 'fetchDeps' && 'queued' in form && form.queued}
 		<section class="soc-section mb-3 border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-800">
 			Dependency fetch job queued (status: {form.syncStatus ?? 'queued'}). Refresh in a moment to see updated results.
+		</section>
+	{/if}
+
+	{#if form && typeof form === 'object' && form.action === 'runScan' && form.success !== false}
+		<section class="soc-section mb-3 border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-800">
+			{form.message ?? `Scan run queued (status: ${form.scanStatus ?? 'queued'}).`}
 		</section>
 	{/if}
 
@@ -488,6 +494,9 @@
 						<button class={shouldShowFetchDeps ? 'soc-btn-primary' : 'soc-btn'} type="submit">
 							Fetch Deps
 						</button>
+					</form>
+					<form method="POST" action="?/runScan" class="inline-block">
+						<button class="soc-btn-primary" type="submit">Run Scan</button>
 					</form>
 					{#if data.syncStatus}
 						<div class="rounded border border-border p-2 text-[11px]">

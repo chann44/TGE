@@ -61,6 +61,7 @@ func main() {
 			Concurrency: 4,
 			Queues: map[string]int{
 				"dependencies": 10,
+				"scans":        8,
 			},
 		},
 	)
@@ -116,6 +117,65 @@ func main() {
 		writeWorkerLog(ctx, centralLogger, "info", "dependency sync completed", map[string]any{
 			"repo_id":      payload.RepoID,
 			"sync_id":      payload.SyncID,
+			"duration":     time.Since(started).String(),
+			"trigger":      payload.Trigger,
+			"requested_by": payload.UserID,
+		})
+		return nil
+	})
+
+	mux.HandleFunc(jobs.TypeScanRun, func(ctx context.Context, task *asynq.Task) error {
+		payload, err := jobs.ParseScanRunPayload(task)
+		if err != nil {
+			return fmt.Errorf("parse payload: %w", asynq.SkipRetry)
+		}
+
+		lockKey := fmt.Sprintf("scan:repo-lock:%d", payload.RepoID)
+		lockValue := fmt.Sprintf("scan:%d:%d", payload.ScanRunID, time.Now().UnixNano())
+		acquired, err := redisClient.SetNX(ctx, lockKey, lockValue, 30*time.Minute)
+		if err != nil {
+			return fmt.Errorf("acquire scan lock: %w", err)
+		}
+		if !acquired {
+			if payload.ScanRunID != 0 {
+				_ = queries.MarkRepositoryScanRunFailed(ctx, db.MarkRepositoryScanRunFailedParams{
+					ID:           payload.ScanRunID,
+					ErrorMessage: "scan already running for repository",
+				})
+			}
+			log.Printf("worker skip scan repo_id=%d run_id=%d reason=locked", payload.RepoID, payload.ScanRunID)
+			writeWorkerLog(ctx, centralLogger, "warn", "scan skipped because repository lock is held", map[string]any{
+				"repo_id": payload.RepoID,
+				"run_id":  payload.ScanRunID,
+			})
+			return nil
+		}
+		defer func() {
+			_ = redisClient.CompareAndDelete(ctx, lockKey, lockValue)
+		}()
+
+		started := time.Now()
+		log.Printf("worker start scan repo_id=%d run_id=%d trigger=%s", payload.RepoID, payload.ScanRunID, payload.Trigger)
+		writeWorkerLog(ctx, centralLogger, "info", "scan started", map[string]any{
+			"repo_id": payload.RepoID,
+			"run_id":  payload.ScanRunID,
+			"trigger": payload.Trigger,
+		})
+
+		if err := services.RunRepositoryScan(ctx, queries, cfg, centralLogger, payload.UserID, payload.RepoID, payload.ScanRunID, payload.Trigger); err != nil {
+			log.Printf("worker scan failed repo_id=%d run_id=%d err=%v", payload.RepoID, payload.ScanRunID, err)
+			writeWorkerLog(ctx, centralLogger, "error", "scan failed", map[string]any{
+				"repo_id": payload.RepoID,
+				"run_id":  payload.ScanRunID,
+				"error":   err.Error(),
+			})
+			return err
+		}
+
+		log.Printf("worker scan complete repo_id=%d run_id=%d duration=%s", payload.RepoID, payload.ScanRunID, time.Since(started).String())
+		writeWorkerLog(ctx, centralLogger, "info", "scan completed", map[string]any{
+			"repo_id":      payload.RepoID,
+			"run_id":       payload.ScanRunID,
 			"duration":     time.Since(started).String(),
 			"trigger":      payload.Trigger,
 			"requested_by": payload.UserID,

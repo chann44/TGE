@@ -297,3 +297,19 @@ INSERT INTO policy_source_custom (
     $4,
     $5
 );
+
+-- name: ListScheduledPolicyRepositoryTargets :many
+SELECT
+    p.user_id,
+    p.id AS policy_id,
+    pt.id AS trigger_id,
+    pt.cron,
+    pt.timezone,
+    r.github_repo_id
+FROM policies p
+INNER JOIN policy_triggers pt ON pt.policy_id = p.id
+INNER JOIN policy_repositories pr ON pr.policy_id = p.id
+INNER JOIN repositories r ON r.id = pr.repository_id
+WHERE p.enabled = TRUE
+  AND pt.type = 'schedule'::trigger_type
+ORDER BY p.id, pt.id, r.github_repo_id;

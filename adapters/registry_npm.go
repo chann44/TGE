@@ -11,16 +11,17 @@ import (
 )
 
 type NPMPackageMetadata struct {
-	Name          string
-	LatestVersion string
-	Creator       string
-	Description   string
-	License       string
-	Homepage      string
-	RepositoryURL string
-	RegistryURL   string
-	LastUpdated   string
-	Dependencies  []PackageDependency
+	Name             string
+	LatestVersion    string
+	Creator          string
+	Description      string
+	License          string
+	Homepage         string
+	RepositoryURL    string
+	RegistryURL      string
+	LastUpdated      string
+	HasInstallScript bool
+	Dependencies     []PackageDependency
 }
 
 type npmRegistryResponse struct {
@@ -39,6 +40,7 @@ type npmRegistryResponse struct {
 		Description          string            `json:"description"`
 		License              string            `json:"license"`
 		Homepage             string            `json:"homepage"`
+		Scripts              map[string]string `json:"scripts"`
 		Dependencies         map[string]string `json:"dependencies"`
 		PeerDependencies     map[string]string `json:"peerDependencies"`
 		OptionalDependencies map[string]string `json:"optionalDependencies"`
@@ -91,16 +93,17 @@ func GetNPMPackageMetadata(ctx context.Context, packageName string) (*NPMPackage
 	}
 
 	metadata := &NPMPackageMetadata{
-		Name:          payload.Name,
-		LatestVersion: latest,
-		Creator:       creator,
-		Description:   strings.TrimSpace(versionPayload.Description),
-		License:       strings.TrimSpace(versionPayload.License),
-		Homepage:      strings.TrimSpace(versionPayload.Homepage),
-		RepositoryURL: normalizeRepositoryURL(strings.TrimSpace(versionPayload.Repository.URL)),
-		RegistryURL:   fmt.Sprintf("https://www.npmjs.com/package/%s", payload.Name),
-		LastUpdated:   strings.TrimSpace(payload.Time[latest]),
-		Dependencies:  make([]PackageDependency, 0),
+		Name:             payload.Name,
+		LatestVersion:    latest,
+		Creator:          creator,
+		Description:      strings.TrimSpace(versionPayload.Description),
+		License:          strings.TrimSpace(versionPayload.License),
+		Homepage:         strings.TrimSpace(versionPayload.Homepage),
+		RepositoryURL:    normalizeRepositoryURL(strings.TrimSpace(versionPayload.Repository.URL)),
+		RegistryURL:      fmt.Sprintf("https://www.npmjs.com/package/%s", payload.Name),
+		LastUpdated:      strings.TrimSpace(payload.Time[latest]),
+		HasInstallScript: hasNPMInstallScript(versionPayload.Scripts),
+		Dependencies:     make([]PackageDependency, 0),
 	}
 
 	for depName, depVersion := range versionPayload.Dependencies {
@@ -138,6 +141,19 @@ func GetNPMPackageMetadata(ctx context.Context, packageName string) (*NPMPackage
 	}
 
 	return metadata, nil
+}
+
+func hasNPMInstallScript(scripts map[string]string) bool {
+	if len(scripts) == 0 {
+		return false
+	}
+	for key := range scripts {
+		switch strings.ToLower(strings.TrimSpace(key)) {
+		case "preinstall", "install", "postinstall":
+			return true
+		}
+	}
+	return false
 }
 
 func normalizeRepositoryURL(raw string) string {

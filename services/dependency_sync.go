@@ -262,9 +262,15 @@ func dependencyManagerForFile(fileName string) string {
 	switch strings.ToLower(fileName) {
 	case "package.json":
 		return "npm"
+	case "package-lock.json", "yarn.lock", "pnpm-lock.yaml":
+		return "npm"
 	case "requirements.txt":
 		return "pip"
+	case "pyproject.toml", "poetry.lock", "pipfile.lock":
+		return "pip"
 	case "go.mod":
+		return "go"
+	case "go.sum":
 		return "go"
 	default:
 		return ""
@@ -285,6 +291,9 @@ func registryForManager(manager string) string {
 }
 
 func parseDependenciesFromManifest(manifest manifestFile, content string) []extractedDependency {
+	if !isDependencyManifest(manifest.File) {
+		return nil
+	}
 	switch manifest.Manager {
 	case "npm":
 		return parsePackageJSONDependencies(manifest.Path, content)
@@ -294,6 +303,15 @@ func parseDependenciesFromManifest(manifest manifestFile, content string) []extr
 		return parseGoModDependencies(manifest.Path, content)
 	default:
 		return nil
+	}
+}
+
+func isDependencyManifest(fileName string) bool {
+	switch strings.ToLower(strings.TrimSpace(fileName)) {
+	case "package.json", "requirements.txt", "go.mod":
+		return true
+	default:
+		return false
 	}
 }
 

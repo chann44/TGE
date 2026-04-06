@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -353,6 +354,73 @@ func (h *Handler) enqueueDependencySync(ctx context.Context, userID, repoID int6
 		return 0, err
 	}
 	return syncRow.ID, nil
+}
+
+func (h *Handler) enqueueRepositoryScan(ctx context.Context, userID, repoID int64, trigger string) (int64, error) {
+	if h.asynqClient == nil {
+		return 0, fmt.Errorf("background queue is not configured")
+	}
+
+	policyID := pgtype.Int8{}
+	policy, err := h.queries.GetRepositoryPolicyByGitHubRepoIDAndUser(ctx, db.GetRepositoryPolicyByGitHubRepoIDAndUserParams{
+		UserID:       userID,
+		GithubRepoID: repoID,
+	})
+	if err == nil {
+		policyID = pgtype.Int8{Int64: policy.ID, Valid: true}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, fmt.Errorf("resolve repository policy: %w", err)
+	}
+
+	scanRun, err := h.queries.CreateRepositoryScanRun(ctx, db.CreateRepositoryScanRunParams{
+		RepositoryID: repoID,
+		PolicyID:     policyID,
+		Trigger:      normalizeScanTriggerInput(trigger),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("create scan run row: %w", err)
+	}
+
+	task, err := jobs.NewScanRunTask(jobs.ScanRunPayload{
+		ScanRunID: scanRun.ID,
+		UserID:    userID,
+		RepoID:    repoID,
+		Trigger:   normalizeScanTriggerInput(trigger),
+	})
+	if err != nil {
+		_ = h.queries.MarkRepositoryScanRunFailed(ctx, db.MarkRepositoryScanRunFailedParams{ID: scanRun.ID, ErrorMessage: "failed to marshal scan queue payload"})
+		return 0, err
+	}
+
+	taskID := fmt.Sprintf("scan:%d:%d:%d", userID, repoID, scanRun.ID)
+	_, err = h.asynqClient.EnqueueContext(
+		ctx,
+		task,
+		asynq.Queue("scans"),
+		asynq.TaskID(taskID),
+		asynq.Unique(2*time.Minute),
+		asynq.MaxRetry(4),
+		asynq.Timeout(20*time.Minute),
+	)
+	if err != nil {
+		if errors.Is(err, asynq.ErrTaskIDConflict) {
+			return scanRun.ID, nil
+		}
+		_ = h.queries.MarkRepositoryScanRunFailed(ctx, db.MarkRepositoryScanRunFailedParams{ID: scanRun.ID, ErrorMessage: "failed to enqueue scan task"})
+		return 0, err
+	}
+
+	return scanRun.ID, nil
+}
+
+func normalizeScanTriggerInput(trigger string) string {
+	v := strings.ToLower(strings.TrimSpace(trigger))
+	switch v {
+	case "manual", "policy", "schedule", "connect", "sync":
+		return v
+	default:
+		return "manual"
+	}
 }
 
 func (h *Handler) githubLogin(w http.ResponseWriter, r *http.Request) {

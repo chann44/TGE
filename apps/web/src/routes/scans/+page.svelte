@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { EcoBadge, StatCard, StatusBadge } from '$lib/components/security';
-	import { scans } from '$lib/data/security-mock';
+
+	let { data }: { data: any } = $props();
+	const scans = $derived((data.scans ?? []) as any[]);
+	const totalScans = $derived(scans.length);
+	const failedScans = $derived(scans.filter((scan: any) => scan.status === 'failed').length);
+	const prScans = $derived(scans.filter((scan: any) => scan.trigger === 'pull_request').length);
 </script>
 
 <div class="soc-page">
@@ -10,40 +15,31 @@
 	</div>
 
 	<section class="soc-grid-4">
-		<StatCard label="Total Scans" value={41} />
-		<StatCard label="Avg Duration" value="23s" />
-		<StatCard label="Failed" value={1} tone="soc-risk-high" />
-		<StatCard label="PR Scans" value={18} />
+		<StatCard label="Total Scans" value={totalScans} />
+		<StatCard label="Avg Duration" value={totalScans > 0 ? 'see rows' : '-'} />
+		<StatCard label="Failed" value={failedScans} tone="soc-risk-high" />
+		<StatCard label="PR Scans" value={prScans} />
 	</section>
 
 	<section class="soc-section">
 		<table class="soc-table">
-			<thead
-				><tr
-					><th>Scan ID</th><th>Repository</th><th>Branch</th><th>Trigger</th><th>Duration</th><th
-						>Findings</th
-					><th>Delta</th><th>Status</th></tr
-				></thead
-			>
+			<thead><tr><th>Scan ID</th><th>Repository</th><th>Policy</th><th>Trigger</th><th>Duration</th><th>Findings</th><th>Status</th></tr></thead>
 			<tbody>
+				{#if scans.length === 0}
+					<tr><td class="soc-subtle" colspan="7">No scans yet.</td></tr>
+				{:else}
 				{#each scans as s}
 					<tr class="soc-table-row-link">
 						<td class="text-primary"><a href={`/scans/${s.id}`}>{s.id}</a></td>
-						<td>{s.repo}</td>
-						<td class="soc-subtle">{s.branch}</td>
+						<td>{s.repository}</td>
+						<td class="soc-subtle">{s.policy || 'Unassigned'}</td>
 						<td><EcoBadge value={s.trigger} /></td>
-						<td class="soc-subtle">{s.dur}</td>
-						<td>{s.findings}</td>
-						<td
-							class={s.diff.startsWith('+')
-								? 'soc-risk-critical'
-								: s.diff.startsWith('-')
-									? 'soc-risk-ok'
-									: 'soc-subtle'}>{s.diff}</td
-						>
+						<td class="soc-subtle">{s.duration || '-'}</td>
+						<td>{s.findings_total}</td>
 						<td><StatusBadge value={s.status} /></td>
 					</tr>
 				{/each}
+				{/if}
 			</tbody>
 		</table>
 	</section>

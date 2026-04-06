@@ -8,6 +8,7 @@ type SummaryResponse = {
 	services_total?: number;
 	queue_backlog?: number;
 	dependency_sync_throughput_1h?: number;
+	scan_throughput_1h?: number;
 	version?: string;
 };
 

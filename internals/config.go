@@ -28,6 +28,8 @@ type Config struct {
 	GithubAppPrivateKey string
 	GithubAppSlug       string
 	GithubAppInstallURL string
+	GHSAAPIToken        string
+	NVDAPIKey           string
 }
 
 var cfg *Config
@@ -61,6 +63,8 @@ func GetConfig() *Config {
 			GithubAppPrivateKey: os.Getenv("GITHUB_APP_PRIVATE_KEY"),
 			GithubAppSlug:       os.Getenv("GITHUB_APP_SLUG"),
 			GithubAppInstallURL: os.Getenv("GITHUB_APP_INSTALL_URL"),
+			GHSAAPIToken:        os.Getenv("GHSA_API_TOKEN"),
+			NVDAPIKey:           os.Getenv("NVD_API_KEY"),
 		}
 
 		if cfg.FrontendURL == "" {

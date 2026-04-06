@@ -4,6 +4,7 @@
 	let { data, form } = $props();
 	const pageData = $derived(data as any);
 	const policy = $derived(pageData.policy);
+	const sourceHealth = $derived(pageData.sourceHealth ?? {});
 	const formData = $derived(form as any);
 	let editPolicyDialogOpen = $state(false);
 
@@ -264,6 +265,59 @@
 						</form>
 					</Dialog.Content>
 				</Dialog.Root>
+
+				<div class="mt-4 rounded border border-border bg-muted/20 p-3">
+					<p class="mb-2 text-sm font-semibold">Scan Source Health</p>
+					<div class="space-y-2 text-[11px]">
+						<div class="flex items-center justify-between">
+							<span class="soc-subtle">OSV</span>
+							<span class={sourceHealth?.osv?.enabled ? 'text-emerald-700' : 'soc-subtle'}>
+								{sourceHealth?.osv?.enabled ? 'enabled' : 'disabled'}
+							</span>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="soc-subtle">GHSA</span>
+							<span
+								class={sourceHealth?.ghsa?.enabled
+									? sourceHealth?.ghsa?.configured
+										? 'text-emerald-700'
+										: 'text-rose-700'
+									: 'soc-subtle'}
+							>
+								{#if sourceHealth?.ghsa?.enabled}
+									{sourceHealth?.ghsa?.configured
+										? `configured (${sourceHealth?.ghsa?.configuredBy})`
+										: 'enabled, missing token'}
+								{:else}
+									disabled
+								{/if}
+							</span>
+						</div>
+						<div class="flex items-center justify-between">
+							<span class="soc-subtle">NVD</span>
+							<span
+								class={sourceHealth?.nvd?.enabled
+									? sourceHealth?.nvd?.configured
+										? 'text-emerald-700'
+										: 'text-rose-700'
+									: 'soc-subtle'}
+							>
+								{#if sourceHealth?.nvd?.enabled}
+									{sourceHealth?.nvd?.configured
+										? `configured (${sourceHealth?.nvd?.configuredBy})`
+										: 'enabled, missing api key'}
+								{:else}
+									disabled
+								{/if}
+							</span>
+						</div>
+						{#if (sourceHealth?.ghsa?.enabled && !sourceHealth?.ghsa?.configured) || (sourceHealth?.nvd?.enabled && !sourceHealth?.nvd?.configured)}
+							<p class="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">
+								Some enabled sources are missing credentials. Add `ghsa_token_ref` / `nvd_api_key_ref` in this policy or set `GHSA_API_TOKEN` / `NVD_API_KEY` in server env.
+							</p>
+						{/if}
+					</div>
+				</div>
 			</section>
 
 			<section class="soc-section p-3 text-xs">
@@ -276,6 +330,16 @@
 						{/each}
 					</select>
 					<button class="soc-btn" type="submit">Assign</button>
+				</form>
+
+				<form method="POST" action="?/runScan" class="mb-3 flex items-center gap-2">
+					<select class="rounded border border-border bg-background px-2 py-1" name="repo_id" required>
+						<option value="">Select assigned repo to scan</option>
+						{#each (policy.repositories ?? []) as repo}
+							<option value={repo.repository_id}>{repo.full_name}</option>
+						{/each}
+					</select>
+					<button class="soc-btn-primary" type="submit">Run Scan</button>
 				</form>
 
 				{#if (policy.repositories ?? []).length === 0}

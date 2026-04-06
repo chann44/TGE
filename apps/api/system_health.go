@@ -34,10 +34,12 @@ type serviceStatus struct {
 var knownServices = []serviceDescriptor{
 	{Key: "api", Name: "API Server"},
 	{Key: "worker", Name: "Worker"},
+	{Key: "scheduler", Name: "Scheduler"},
 	{Key: "postgres", Name: "PostgreSQL"},
 	{Key: "redis", Name: "Redis"},
 	{Key: "github_webhook", Name: "GitHub Webhook"},
 	{Key: "osv_scanner", Name: "OSV Scanner"},
+	{Key: "scan_worker", Name: "Scan Worker"},
 }
 
 func (h *Handler) systemHealthSummary(w http.ResponseWriter, r *http.Request) {
@@ -52,12 +54,16 @@ func (h *Handler) systemHealthSummary(w http.ResponseWriter, r *http.Request) {
 	queued, _ := h.queries.CountRepositoryDependencySyncByStatus(r.Context(), "queued")
 	running, _ := h.queries.CountRepositoryDependencySyncByStatus(r.Context(), "running")
 	throughput, _ := h.queries.CountRepositoryDependencySyncSuccessSince(r.Context(), toPgTimestamptz(time.Now().Add(-1*time.Hour)))
+	scanQueued, _ := h.queries.CountRepositoryScansByStatus(r.Context(), "queued")
+	scanRunning, _ := h.queries.CountRepositoryScansByStatus(r.Context(), "running")
+	scanThroughput, _ := h.queries.CountRepositoryScansSuccessSince(r.Context(), toPgTimestamptz(time.Now().Add(-1*time.Hour)))
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"services_up":                   servicesUp,
 		"services_total":                len(statuses),
-		"queue_backlog":                 queued + running,
+		"queue_backlog":                 queued + running + scanQueued + scanRunning,
 		"dependency_sync_throughput_1h": throughput,
+		"scan_throughput_1h":            scanThroughput,
 		"version":                       appVersion,
 		"generated_at":                  time.Now().UTC().Format(time.RFC3339),
 	})
@@ -73,6 +79,9 @@ func (h *Handler) systemHealthQueues(w http.ResponseWriter, r *http.Request) {
 	queued, _ := h.queries.CountRepositoryDependencySyncByStatus(r.Context(), "queued")
 	running, _ := h.queries.CountRepositoryDependencySyncByStatus(r.Context(), "running")
 	failedSince, _ := h.queries.CountRepositoryDependencySyncFailedSince(r.Context(), toPgTimestamptz(time.Now().Add(-24*time.Hour)))
+	scanQueued, _ := h.queries.CountRepositoryScansByStatus(r.Context(), "queued")
+	scanRunning, _ := h.queries.CountRepositoryScansByStatus(r.Context(), "running")
+	scanFailedSince, _ := h.queries.CountRepositoryScansFailedSince(r.Context(), toPgTimestamptz(time.Now().Add(-24*time.Hour)))
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"queues": []map[string]any{
@@ -82,6 +91,14 @@ func (h *Handler) systemHealthQueues(w http.ResponseWriter, r *http.Request) {
 				"pending":    queued,
 				"running":    running,
 				"failed":     failedSince,
+				"sampled_at": time.Now().UTC().Format(time.RFC3339),
+			},
+			{
+				"queue":      "scans",
+				"job_type":   "scan_run",
+				"pending":    scanQueued,
+				"running":    scanRunning,
+				"failed":     scanFailedSince,
 				"sampled_at": time.Now().UTC().Format(time.RFC3339),
 			},
 		},
@@ -294,6 +311,31 @@ func (h *Handler) collectServiceStatuses(ctx context.Context) []serviceStatus {
 	}
 	workerStatus.LastCheckedAt = now.Format(time.RFC3339)
 	statuses = append(statuses, workerStatus)
+
+	scanWorkerStatus := serviceStatus{Key: "scan_worker", Name: "Scan Worker", Status: "ok", UptimePct: 99.5, Note: "processing scan jobs"}
+	scanRunning, scanRunErr := h.queries.CountRepositoryScansByStatus(ctx, "running")
+	scanQueued, scanQueueErr := h.queries.CountRepositoryScansByStatus(ctx, "queued")
+	if scanRunErr != nil || scanQueueErr != nil {
+		scanWorkerStatus.Status = "degraded"
+		scanWorkerStatus.UptimePct = 95
+		scanWorkerStatus.Note = "unable to read scan queue stats"
+	} else if scanRunning == 0 && scanQueued > 20 {
+		scanWorkerStatus.Status = "degraded"
+		scanWorkerStatus.UptimePct = 96
+		scanWorkerStatus.Note = "scan queue backlog increasing"
+	}
+	scanWorkerStatus.LastCheckedAt = now.Format(time.RFC3339)
+	statuses = append(statuses, scanWorkerStatus)
+
+	statuses = append(statuses, serviceStatus{
+		Key:           "scheduler",
+		Name:          "Scheduler",
+		Status:        "degraded",
+		LatencyMS:     0,
+		UptimePct:     98,
+		LastCheckedAt: now.Format(time.RFC3339),
+		Note:          "active heartbeat probe not configured",
+	})
 
 	statuses = append(statuses, serviceStatus{
 		Key:           "github_webhook",
