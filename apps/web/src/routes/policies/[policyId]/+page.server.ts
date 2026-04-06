@@ -67,28 +67,11 @@ export const load: PageServerLoad = async ({ cookies, fetch, params, url }) => {
 
 	const policy = (await policyRes.json()) as PolicyDetail;
 	const reposPayload = reposRes.ok ? (((await reposRes.json()) as RepositoriesResponse) ?? {}) : {};
-	const envGHSAConfigured = String(process.env.GHSA_API_TOKEN ?? '').trim().length > 0;
-	const envNVDConfigured = String(process.env.NVD_API_KEY ?? '').trim().length > 0;
-	const policyGHSAConfigured = String(policy.sources?.ghsa_token_ref ?? '').trim().length > 0;
-	const policyNVDConfigured = String(policy.sources?.nvd_api_key_ref ?? '').trim().length > 0;
 
 	return {
 		policy,
 		repositories: (reposPayload.repositories ?? []).filter((repo) => repo.connected),
-		flashMessage: url.searchParams.get('created') === '1' ? 'Policy created successfully.' : '',
-		sourceHealth: {
-			osv: { enabled: policy.sources?.osv_enabled === true, configured: true },
-			ghsa: {
-				enabled: policy.sources?.ghsa_enabled === true,
-				configured: policyGHSAConfigured || envGHSAConfigured,
-				configuredBy: policyGHSAConfigured ? 'policy' : envGHSAConfigured ? 'env' : 'none'
-			},
-			nvd: {
-				enabled: policy.sources?.nvd_enabled === true,
-				configured: policyNVDConfigured || envNVDConfigured,
-				configuredBy: policyNVDConfigured ? 'policy' : envNVDConfigured ? 'env' : 'none'
-			}
-		}
+		flashMessage: url.searchParams.get('created') === '1' ? 'Policy created successfully.' : ''
 	};
 };
 
@@ -112,6 +95,20 @@ export const actions: Actions = {
 			.map((v) => v.trim())
 			.filter(Boolean);
 
+		const currentPolicyResponse = await fetch(`${API_BASE_URL}/v1/policies/${params.policyId}`, {
+			headers: { Authorization: `Bearer ${session}` }
+		});
+		if (currentPolicyResponse.status === 401) throw redirect(302, '/auth');
+		if (!currentPolicyResponse.ok) {
+			const errorText = (await currentPolicyResponse.text()).trim();
+			return fail(currentPolicyResponse.status, {
+				action: 'save',
+				success: false,
+				message: errorText || 'Failed to load current policy settings.'
+			});
+		}
+		const currentPolicy = (await currentPolicyResponse.json()) as any;
+
 		const payload = {
 			name,
 			enabled: has(form, 'enabled'),
@@ -123,46 +120,9 @@ export const actions: Actions = {
 					timezone: String(form.get('trigger_timezone') ?? 'UTC').trim()
 				}
 			],
-			sources: {
-				registry_first: has(form, 'registry_first'),
-				registry_max_age_days: Number(form.get('registry_max_age_days') ?? 7),
-				registry_only: has(form, 'registry_only'),
-				osv_enabled: has(form, 'osv_enabled'),
-				ghsa_enabled: has(form, 'ghsa_enabled'),
-				ghsa_token_ref: String(form.get('ghsa_token_ref') ?? '').trim(),
-				nvd_enabled: has(form, 'nvd_enabled'),
-				nvd_api_key_ref: String(form.get('nvd_api_key_ref') ?? '').trim(),
-				govulncheck_enabled: has(form, 'govulncheck_enabled')
-			},
-			sast: {
-				enabled: has(form, 'sast_enabled'),
-				patterns_enabled: has(form, 'patterns_enabled'),
-				rulesets: String(form.get('rulesets') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				min_severity: String(form.get('min_severity') ?? 'medium').trim(),
-				exclude_paths: String(form.get('exclude_paths') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				ai_enabled: has(form, 'ai_enabled'),
-				ai_max_files_per_scan: Number(form.get('ai_max_files_per_scan') ?? 50),
-				ai_reachability: has(form, 'ai_reachability'),
-				ai_suggest_fix: has(form, 'ai_suggest_fix')
-			},
-			registry: {
-				push_enabled: has(form, 'push_enabled'),
-				push_url: String(form.get('push_url') ?? '').trim(),
-				push_signing_key_ref: String(form.get('push_signing_key_ref') ?? '').trim(),
-				pull_enabled: has(form, 'pull_enabled'),
-				pull_url: String(form.get('pull_url') ?? '').trim(),
-				pull_trusted_keys: String(form.get('pull_trusted_keys') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				pull_max_age_days: Number(form.get('pull_max_age_days') ?? 7)
-			}
+			sources: currentPolicy.sources,
+			sast: currentPolicy.sast,
+			registry: currentPolicy.registry
 		};
 
 		const response = await fetch(`${API_BASE_URL}/v1/policies/${params.policyId}`, {

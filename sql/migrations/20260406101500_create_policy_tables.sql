@@ -62,9 +62,10 @@ CREATE TABLE IF NOT EXISTS policy_sources (
     osv_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     ghsa_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     ghsa_token_ref TEXT NOT NULL DEFAULT '',
-    nvd_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    nvd_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     nvd_api_key_ref TEXT NOT NULL DEFAULT '',
-    govulncheck_enabled BOOLEAN NOT NULL DEFAULT TRUE
+    govulncheck_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    supply_chain_enabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS policy_source_custom (

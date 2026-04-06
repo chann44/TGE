@@ -20,11 +20,12 @@ import (
 )
 
 type policySourceConfig struct {
-	OSVEnabled  bool
-	GHSAEnabled bool
-	NVDEnabled  bool
-	GHSAToken   string
-	NVDAPIKey   string
+	OSVEnabled         bool
+	GHSAEnabled        bool
+	NVDEnabled         bool
+	SupplyChainEnabled bool
+	GHSAToken          string
+	NVDAPIKey          string
 }
 
 type normalizedFinding struct {
@@ -131,7 +132,11 @@ func RunRepositoryScan(ctx context.Context, queries *db.Queries, cfg *internal.C
 		}
 	}
 
-	addSupplyChainFlags(ctx, queries, logger, cfg, scanRunID, repoID, allDeps, findingMap)
+	if cfg.SupplyChainEnabled && sourceCfg.SupplyChainEnabled {
+		addSupplyChainFlags(ctx, queries, logger, cfg, scanRunID, repoID, allDeps, findingMap)
+	} else {
+		logScanEvent(ctx, queries, logger, scanRunID, repoID, "info", "supply-chain analysis skipped (disabled by env or policy)", "")
+	}
 
 	logScanEvent(ctx, queries, logger, scanRunID, repoID, "info", "enriching findings with GHSA/NVD", "")
 	if err := enrichFindingsFromProviders(ctx, sourceCfg, findingMap); err != nil {
@@ -1275,11 +1280,12 @@ func collectOSVFindings(ctx context.Context, deps []db.ListRepositoryDependencie
 
 func resolvePolicyForScan(ctx context.Context, queries *db.Queries, cfg *internal.Config, userID, repoID int64) (pgtype.Int8, policySourceConfig) {
 	defaultConfig := policySourceConfig{
-		OSVEnabled:  true,
-		GHSAEnabled: true,
-		NVDEnabled:  true,
-		GHSAToken:   strings.TrimSpace(cfg.GHSAAPIToken),
-		NVDAPIKey:   strings.TrimSpace(cfg.NVDAPIKey),
+		OSVEnabled:         true,
+		GHSAEnabled:        true,
+		NVDEnabled:         true,
+		SupplyChainEnabled: false,
+		GHSAToken:          strings.TrimSpace(cfg.GHSAAPIToken),
+		NVDAPIKey:          strings.TrimSpace(cfg.NVDAPIKey),
 	}
 
 	policy, err := queries.GetRepositoryPolicyByGitHubRepoIDAndUser(ctx, db.GetRepositoryPolicyByGitHubRepoIDAndUserParams{
@@ -1300,11 +1306,12 @@ func resolvePolicyForScan(ctx context.Context, queries *db.Queries, cfg *interna
 	}
 
 	return policyID, policySourceConfig{
-		OSVEnabled:  sources.OsvEnabled,
-		GHSAEnabled: sources.GhsaEnabled,
-		NVDEnabled:  sources.NvdEnabled,
-		GHSAToken:   firstNonEmpty(strings.TrimSpace(sources.GhsaTokenRef), strings.TrimSpace(cfg.GHSAAPIToken)),
-		NVDAPIKey:   firstNonEmpty(strings.TrimSpace(sources.NvdApiKeyRef), strings.TrimSpace(cfg.NVDAPIKey)),
+		OSVEnabled:         sources.OsvEnabled,
+		GHSAEnabled:        sources.GhsaEnabled,
+		NVDEnabled:         sources.NvdEnabled,
+		SupplyChainEnabled: sources.SupplyChainEnabled,
+		GHSAToken:          firstNonEmpty(strings.TrimSpace(sources.GhsaTokenRef), strings.TrimSpace(cfg.GHSAAPIToken)),
+		NVDAPIKey:          firstNonEmpty(strings.TrimSpace(sources.NvdApiKeyRef), strings.TrimSpace(cfg.NVDAPIKey)),
 	}
 }
 

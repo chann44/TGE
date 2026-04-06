@@ -226,6 +226,7 @@ type PolicySource struct {
 	NvdEnabled         bool   `json:"nvd_enabled"`
 	NvdApiKeyRef       string `json:"nvd_api_key_ref"`
 	GovulncheckEnabled bool   `json:"govulncheck_enabled"`
+	SupplyChainEnabled bool   `json:"supply_chain_enabled"`
 }
 
 type PolicySourceCustom struct {

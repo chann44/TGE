@@ -29,6 +29,19 @@ type GitHubRepositoriesResponse = {
 
 const has = (form: FormData, key: string) => form.get(key) !== null;
 
+const defaultSourcesPayload = {
+	registry_first: true,
+	registry_max_age_days: 7,
+	registry_only: false,
+	osv_enabled: true,
+	ghsa_enabled: true,
+	ghsa_token_ref: '',
+	nvd_enabled: true,
+	nvd_api_key_ref: '',
+	govulncheck_enabled: true,
+	supply_chain_enabled: false
+};
+
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	const session = cookies.get('session');
 	if (!session) {
@@ -91,46 +104,7 @@ export const actions: Actions = {
 					timezone: String(form.get('trigger_timezone') ?? 'UTC').trim()
 				}
 			],
-			sources: {
-				registry_first: has(form, 'registry_first'),
-				registry_max_age_days: Number(form.get('registry_max_age_days') ?? 7),
-				registry_only: has(form, 'registry_only'),
-				osv_enabled: has(form, 'osv_enabled'),
-				ghsa_enabled: has(form, 'ghsa_enabled'),
-				ghsa_token_ref: String(form.get('ghsa_token_ref') ?? '').trim(),
-				nvd_enabled: has(form, 'nvd_enabled'),
-				nvd_api_key_ref: String(form.get('nvd_api_key_ref') ?? '').trim(),
-				govulncheck_enabled: has(form, 'govulncheck_enabled')
-			},
-			sast: {
-				enabled: has(form, 'sast_enabled'),
-				patterns_enabled: has(form, 'patterns_enabled'),
-				rulesets: String(form.get('rulesets') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				min_severity: String(form.get('min_severity') ?? 'medium').trim(),
-				exclude_paths: String(form.get('exclude_paths') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				ai_enabled: has(form, 'ai_enabled'),
-				ai_max_files_per_scan: Number(form.get('ai_max_files_per_scan') ?? 50),
-				ai_reachability: has(form, 'ai_reachability'),
-				ai_suggest_fix: has(form, 'ai_suggest_fix')
-			},
-			registry: {
-				push_enabled: has(form, 'push_enabled'),
-				push_url: String(form.get('push_url') ?? '').trim(),
-				push_signing_key_ref: String(form.get('push_signing_key_ref') ?? '').trim(),
-				pull_enabled: has(form, 'pull_enabled'),
-				pull_url: String(form.get('pull_url') ?? '').trim(),
-				pull_trusted_keys: String(form.get('pull_trusted_keys') ?? '')
-					.split(',')
-					.map((value) => value.trim())
-					.filter(Boolean),
-				pull_max_age_days: Number(form.get('pull_max_age_days') ?? 7)
-			}
+			sources: defaultSourcesPayload
 		};
 
 		const response = await fetch(`${API_BASE_URL}/v1/policies`, {

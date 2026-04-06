@@ -33,6 +33,7 @@ type policySourcesInput struct {
 	NvdEnabled         bool   `json:"nvd_enabled"`
 	NvdApiKeyRef       string `json:"nvd_api_key_ref"`
 	GovulncheckEnabled bool   `json:"govulncheck_enabled"`
+	SupplyChainEnabled bool   `json:"supply_chain_enabled"`
 }
 
 type policyCustomSourceInput struct {
@@ -570,6 +571,7 @@ func (h *Handler) applyPolicyConfig(ctx context.Context, policyID int64, req pol
 		NvdEnabled:         sources.NvdEnabled,
 		NvdApiKeyRef:       strings.TrimSpace(sources.NvdApiKeyRef),
 		GovulncheckEnabled: sources.GovulncheckEnabled,
+		SupplyChainEnabled: sources.SupplyChainEnabled,
 	}); err != nil {
 		return fmt.Errorf("failed to upsert policy sources")
 	}
@@ -705,9 +707,10 @@ func (h *Handler) policyDetailResponse(ctx context.Context, userID int64, policy
 			OsvEnabled:         true,
 			GhsaEnabled:        true,
 			GhsaTokenRef:       "",
-			NvdEnabled:         false,
+			NvdEnabled:         true,
 			NvdApiKeyRef:       "",
 			GovulncheckEnabled: true,
+			SupplyChainEnabled: false,
 		}
 	}
 
@@ -916,9 +919,10 @@ func defaultPolicySourcesInput() policySourcesInput {
 		OsvEnabled:         true,
 		GhsaEnabled:        true,
 		GhsaTokenRef:       "",
-		NvdEnabled:         false,
+		NvdEnabled:         true,
 		NvdApiKeyRef:       "",
 		GovulncheckEnabled: true,
+		SupplyChainEnabled: false,
 	}
 }
 

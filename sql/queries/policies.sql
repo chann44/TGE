@@ -139,7 +139,8 @@ SELECT
     ghsa_token_ref,
     nvd_enabled,
     nvd_api_key_ref,
-    govulncheck_enabled
+    govulncheck_enabled,
+    supply_chain_enabled
 FROM policy_sources
 WHERE policy_id = $1;
 
@@ -154,7 +155,8 @@ INSERT INTO policy_sources (
     ghsa_token_ref,
     nvd_enabled,
     nvd_api_key_ref,
-    govulncheck_enabled
+    govulncheck_enabled,
+    supply_chain_enabled
 ) VALUES (
     $1,
     $2,
@@ -165,7 +167,8 @@ INSERT INTO policy_sources (
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11
 )
 ON CONFLICT (policy_id)
 DO UPDATE SET
@@ -177,7 +180,8 @@ DO UPDATE SET
     ghsa_token_ref = EXCLUDED.ghsa_token_ref,
     nvd_enabled = EXCLUDED.nvd_enabled,
     nvd_api_key_ref = EXCLUDED.nvd_api_key_ref,
-    govulncheck_enabled = EXCLUDED.govulncheck_enabled;
+    govulncheck_enabled = EXCLUDED.govulncheck_enabled,
+    supply_chain_enabled = EXCLUDED.supply_chain_enabled;
 
 -- name: GetPolicySastByPolicy :one
 SELECT

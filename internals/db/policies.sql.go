@@ -287,7 +287,8 @@ SELECT
     ghsa_token_ref,
     nvd_enabled,
     nvd_api_key_ref,
-    govulncheck_enabled
+    govulncheck_enabled,
+    supply_chain_enabled
 FROM policy_sources
 WHERE policy_id = $1
 `
@@ -306,6 +307,7 @@ func (q *Queries) GetPolicySourcesByPolicy(ctx context.Context, policyID int64) 
 		&i.NvdEnabled,
 		&i.NvdApiKeyRef,
 		&i.GovulncheckEnabled,
+		&i.SupplyChainEnabled,
 	)
 	return i, err
 }
@@ -803,7 +805,8 @@ INSERT INTO policy_sources (
     ghsa_token_ref,
     nvd_enabled,
     nvd_api_key_ref,
-    govulncheck_enabled
+    govulncheck_enabled,
+    supply_chain_enabled
 ) VALUES (
     $1,
     $2,
@@ -814,7 +817,8 @@ INSERT INTO policy_sources (
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11
 )
 ON CONFLICT (policy_id)
 DO UPDATE SET
@@ -826,7 +830,8 @@ DO UPDATE SET
     ghsa_token_ref = EXCLUDED.ghsa_token_ref,
     nvd_enabled = EXCLUDED.nvd_enabled,
     nvd_api_key_ref = EXCLUDED.nvd_api_key_ref,
-    govulncheck_enabled = EXCLUDED.govulncheck_enabled
+    govulncheck_enabled = EXCLUDED.govulncheck_enabled,
+    supply_chain_enabled = EXCLUDED.supply_chain_enabled
 `
 
 type UpsertPolicySourcesParams struct {
@@ -840,6 +845,7 @@ type UpsertPolicySourcesParams struct {
 	NvdEnabled         bool   `json:"nvd_enabled"`
 	NvdApiKeyRef       string `json:"nvd_api_key_ref"`
 	GovulncheckEnabled bool   `json:"govulncheck_enabled"`
+	SupplyChainEnabled bool   `json:"supply_chain_enabled"`
 }
 
 func (q *Queries) UpsertPolicySources(ctx context.Context, arg UpsertPolicySourcesParams) error {
@@ -854,6 +860,7 @@ func (q *Queries) UpsertPolicySources(ctx context.Context, arg UpsertPolicySourc
 		arg.NvdEnabled,
 		arg.NvdApiKeyRef,
 		arg.GovulncheckEnabled,
+		arg.SupplyChainEnabled,
 	)
 	return err
 }

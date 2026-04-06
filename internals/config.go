@@ -3,6 +3,7 @@ package internal
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -30,6 +31,7 @@ type Config struct {
 	GithubAppInstallURL string
 	GHSAAPIToken        string
 	NVDAPIKey           string
+	SupplyChainEnabled  bool
 }
 
 var cfg *Config
@@ -65,6 +67,7 @@ func GetConfig() *Config {
 			GithubAppInstallURL: os.Getenv("GITHUB_APP_INSTALL_URL"),
 			GHSAAPIToken:        os.Getenv("GHSA_API_TOKEN"),
 			NVDAPIKey:           os.Getenv("NVD_API_KEY"),
+			SupplyChainEnabled:  parseEnvBoolDefaultFalse("SUPPLY_CHAIN_ENABLED"),
 		}
 
 		if cfg.FrontendURL == "" {
@@ -87,4 +90,13 @@ func GetConfig() *Config {
 		}
 	}
 	return cfg
+}
+
+func parseEnvBoolDefaultFalse(key string) bool {
+	v := os.Getenv(key)
+	parsed, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return parsed
 }
