@@ -1,8 +1,8 @@
-# 🔐 TGE
+# Arrakis
 
-Self-hosted supply chain security scanner for your codebase.
+Arrakis is a self-hosted, open-source supply chain security platform.
 
-Scan dependencies, track updates, and detect risky or suspicious behavior beyond known vulnerabilities.
+Our goal is to make open source much safer and make package registries more approachable and trustworthy for every team and community that depends on them.
 
 ## 🚀 What it does
 
@@ -44,7 +44,7 @@ deployments/ # docker / k8s
 
 ```bash
 git clone git@github.com:chann44/TGE.git
-cd TGE
+cd arrakis
 
 cp .env.example .env
 docker compose -f deployments/dev.compose.yml up -d
@@ -56,7 +56,7 @@ API: `http://localhost:8080`
 
 ```bash
 git clone git@github.com:chann44/TGE.git
-cd TGE
+cd arrakis
 
 cp .env.example .env
 docker compose -f deployments/selfhost.compose.yml up -d
