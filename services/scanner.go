@@ -181,6 +181,20 @@ func RunRepositoryScan(ctx context.Context, queries *db.Queries, cfg *internal.C
 			return fmt.Errorf("create scan finding: %w", err)
 		}
 
+		if err := queries.LinkRepositoryScanRunFinding(ctx, db.LinkRepositoryScanRunFindingParams{
+			ScanRunID: scanRunID,
+			FindingID: row.ID,
+		}); err != nil {
+			return fmt.Errorf("link scan finding to run: %w", err)
+		}
+
+		if err := queries.UpsertRepositoryFindingOccurrence(ctx, db.UpsertRepositoryFindingOccurrenceParams{
+			RepositoryID: repoID,
+			FindingID:    row.ID,
+		}); err != nil {
+			return fmt.Errorf("upsert repository finding occurrence: %w", err)
+		}
+
 		for _, source := range finding.Sources {
 			if err := queries.AddRepositoryScanFindingSource(ctx, db.AddRepositoryScanFindingSourceParams{
 				FindingID:        row.ID,

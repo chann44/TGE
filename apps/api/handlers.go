@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -733,7 +734,9 @@ func (h *Handler) githubRepositories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseRepos := make([]githubRepositoryResponse, 0, len(repositories))
+	githubByRepoID := make(map[int64]struct{}, len(repositories))
 	for _, repo := range repositories {
+		githubByRepoID[repo.ID] = struct{}{}
 		_, connected := connectedByRepoID[repo.ID]
 		responseRepos = append(responseRepos, githubRepositoryResponse{
 			ID:            repo.ID,
@@ -751,6 +754,40 @@ func (h *Handler) githubRepositories(w http.ResponseWriter, r *http.Request) {
 			Connected:     connected,
 		})
 	}
+
+	for _, repo := range connectedRepos {
+		if _, exists := githubByRepoID[repo.GithubRepoID]; exists {
+			continue
+		}
+
+		updatedAt := ""
+		if repo.UpdatedAt.Valid {
+			updatedAt = repo.UpdatedAt.Time.UTC().Format(time.RFC3339)
+		}
+
+		responseRepos = append(responseRepos, githubRepositoryResponse{
+			ID:            repo.GithubRepoID,
+			Name:          repo.Name,
+			FullName:      repo.FullName,
+			Private:       repo.Private,
+			DefaultBranch: repo.DefaultBranch,
+			HTMLURL:       repo.HtmlUrl,
+			Description:   "",
+			Language:      "",
+			Stargazers:    0,
+			Forks:         0,
+			OpenIssues:    0,
+			UpdatedAt:     updatedAt,
+			Connected:     true,
+		})
+	}
+
+	sort.Slice(responseRepos, func(i, j int) bool {
+		if responseRepos[i].Connected != responseRepos[j].Connected {
+			return responseRepos[i].Connected
+		}
+		return strings.ToLower(responseRepos[i].FullName) < strings.ToLower(responseRepos[j].FullName)
+	})
 
 	page := queryInt(r.URL.Query().Get("page"), 1)
 	pageSize := queryInt(r.URL.Query().Get("page_size"), 20)

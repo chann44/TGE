@@ -221,7 +221,7 @@ func (h *Handler) getScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sourceRows, err := h.queries.ListRepositoryScanFindingSourcesByRunAndUser(r.Context(), db.ListRepositoryScanFindingSourcesByRunAndUserParams{UserID: userID, ID: scanID})
+	sourceRows, err := h.queries.ListRepositoryScanFindingSourcesByRunAndUser(r.Context(), db.ListRepositoryScanFindingSourcesByRunAndUserParams{UserID: userID, ScanRunID: scanID})
 	if err != nil {
 		http.Error(w, "failed to fetch scan finding sources", http.StatusInternalServerError)
 		return
@@ -234,7 +234,7 @@ func (h *Handler) getScan(w http.ResponseWriter, r *http.Request) {
 
 	findings := make([]scanFindingResponse, 0, len(findingsRows))
 	for _, finding := range findingsRows {
-		findings = append(findings, mapScanFinding(finding, sourcesByFinding[finding.ID]))
+		findings = append(findings, mapScanFindingByRunRow(finding, sourcesByFinding[finding.ID]))
 	}
 
 	logRows, err := h.queries.ListRepositoryScanLogsByRunAndUser(r.Context(), db.ListRepositoryScanLogsByRunAndUserParams{UserID: userID, ScanRunID: scanID})
@@ -376,7 +376,7 @@ func (h *Handler) repositoryFindings(w http.ResponseWriter, r *http.Request) {
 
 	findings := make([]scanFindingResponse, 0, len(findingsRows))
 	for _, finding := range findingsRows {
-		findings = append(findings, mapScanFinding(finding, sourcesByFinding[finding.ID]))
+		findings = append(findings, mapLatestRepositoryFindingRow(finding, sourcesByFinding[finding.ID]))
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -449,6 +449,56 @@ func mapScanRunDetailRow(row db.GetRepositoryScanRunByIDAndUserRow) scanRunRespo
 }
 
 func mapScanFinding(row db.RepositoryScanFinding, sources []string) scanFindingResponse {
+	sort.Strings(sources)
+	return scanFindingResponse{
+		ID:              row.ID,
+		ScanRunID:       row.ScanRunID,
+		RepositoryID:    row.RepositoryID,
+		PackageName:     row.PackageName,
+		Manager:         row.Manager,
+		Registry:        row.Registry,
+		VersionSpec:     row.VersionSpec,
+		ResolvedVersion: row.ResolvedVersion,
+		AdvisoryID:      row.AdvisoryID,
+		Aliases:         row.Aliases,
+		Title:           row.Title,
+		Summary:         row.Summary,
+		Severity:        string(row.Severity),
+		FixedVersion:    row.FixedVersion,
+		ReferenceURL:    row.ReferenceUrl,
+		Status:          row.Status,
+		Sources:         sources,
+		SourceLinks:     buildSourceLinks(row.AdvisoryID, row.Aliases, row.ReferenceUrl, sources),
+		CreatedAt:       timestamptzToString(row.CreatedAt),
+	}
+}
+
+func mapScanFindingByRunRow(row db.ListRepositoryScanFindingsByRunAndUserRow, sources []string) scanFindingResponse {
+	sort.Strings(sources)
+	return scanFindingResponse{
+		ID:              row.ID,
+		ScanRunID:       row.ScanRunID,
+		RepositoryID:    row.RepositoryID,
+		PackageName:     row.PackageName,
+		Manager:         row.Manager,
+		Registry:        row.Registry,
+		VersionSpec:     row.VersionSpec,
+		ResolvedVersion: row.ResolvedVersion,
+		AdvisoryID:      row.AdvisoryID,
+		Aliases:         row.Aliases,
+		Title:           row.Title,
+		Summary:         row.Summary,
+		Severity:        string(row.Severity),
+		FixedVersion:    row.FixedVersion,
+		ReferenceURL:    row.ReferenceUrl,
+		Status:          row.Status,
+		Sources:         sources,
+		SourceLinks:     buildSourceLinks(row.AdvisoryID, row.Aliases, row.ReferenceUrl, sources),
+		CreatedAt:       timestamptzToString(row.CreatedAt),
+	}
+}
+
+func mapLatestRepositoryFindingRow(row db.ListLatestRepositoryFindingsByRepoAndUserRow, sources []string) scanFindingResponse {
 	sort.Strings(sources)
 	return scanFindingResponse{
 		ID:              row.ID,

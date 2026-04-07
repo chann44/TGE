@@ -278,7 +278,26 @@ CREATE TABLE IF NOT EXISTS repository_scan_findings (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (status IN ('open', 'resolved')),
-    UNIQUE (scan_run_id, package_name, advisory_id)
+    UNIQUE (manager, registry, package_name, resolved_version, advisory_id)
+);
+
+CREATE TABLE IF NOT EXISTS repository_scan_run_findings (
+    scan_run_id BIGINT NOT NULL REFERENCES repository_scan_runs(id) ON DELETE CASCADE,
+    finding_id BIGINT NOT NULL REFERENCES repository_scan_findings(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (scan_run_id, finding_id)
+);
+
+CREATE TABLE IF NOT EXISTS repository_finding_occurrences (
+    repository_id BIGINT NOT NULL,
+    finding_id BIGINT NOT NULL REFERENCES repository_scan_findings(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'open',
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (repository_id, finding_id),
+    CHECK (status IN ('open', 'resolved'))
 );
 
 CREATE TABLE IF NOT EXISTS repository_scan_finding_sources (
@@ -339,6 +358,18 @@ ON repository_scan_findings (scan_run_id);
 
 CREATE INDEX IF NOT EXISTS repository_scan_findings_advisory_idx
 ON repository_scan_findings (advisory_id);
+
+CREATE INDEX IF NOT EXISTS repository_scan_run_findings_finding_id_idx
+ON repository_scan_run_findings (finding_id);
+
+CREATE INDEX IF NOT EXISTS repository_scan_run_findings_scan_run_id_idx
+ON repository_scan_run_findings (scan_run_id);
+
+CREATE INDEX IF NOT EXISTS repository_finding_occurrences_finding_id_idx
+ON repository_finding_occurrences (finding_id);
+
+CREATE INDEX IF NOT EXISTS repository_finding_occurrences_repository_id_idx
+ON repository_finding_occurrences (repository_id, last_seen_at DESC);
 
 CREATE INDEX IF NOT EXISTS repository_scan_logs_run_id_idx
 ON repository_scan_logs (scan_run_id, created_at ASC);

@@ -311,6 +311,16 @@ type RepositoryDependencySync struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
+type RepositoryFindingOccurrence struct {
+	RepositoryID int64              `json:"repository_id"`
+	FindingID    int64              `json:"finding_id"`
+	Status       string             `json:"status"`
+	FirstSeenAt  pgtype.Timestamptz `json:"first_seen_at"`
+	LastSeenAt   pgtype.Timestamptz `json:"last_seen_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type RepositoryScanFinding struct {
 	ID              int64              `json:"id"`
 	ScanRunID       int64              `json:"scan_run_id"`
@@ -367,6 +377,12 @@ type RepositoryScanRun struct {
 	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type RepositoryScanRunFinding struct {
+	ScanRunID int64              `json:"scan_run_id"`
+	FindingID int64              `json:"finding_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type ServiceStatusSnapshot struct {

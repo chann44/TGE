@@ -53,13 +53,14 @@ type Querier interface {
 	GetUserCustomDomainByID(ctx context.Context, arg GetUserCustomDomainByIDParams) (CustomDomain, error)
 	GetUserOAuthToken(ctx context.Context, arg GetUserOAuthTokenParams) (UserOauthToken, error)
 	GetUserRepositoryByGitHubRepoID(ctx context.Context, arg GetUserRepositoryByGitHubRepoIDParams) (Repository, error)
+	LinkRepositoryScanRunFinding(ctx context.Context, arg LinkRepositoryScanRunFindingParams) error
 	ListActiveCustomDomains(ctx context.Context) ([]CustomDomain, error)
 	ListActiveRepositoryDependencySync(ctx context.Context, repositoryID int64) ([]RepositoryDependencySync, error)
 	ListDependencyEdgesByFromVersion(ctx context.Context, fromVersionID int64) ([]ListDependencyEdgesByFromVersionRow, error)
 	ListFindingsByUser(ctx context.Context, userID int64) ([]ListFindingsByUserRow, error)
 	ListLatestRepositoryDependencySync(ctx context.Context, repositoryID int64) ([]RepositoryDependencySync, error)
 	ListLatestRepositoryFindingSourcesByRepoAndUser(ctx context.Context, arg ListLatestRepositoryFindingSourcesByRepoAndUserParams) ([]ListLatestRepositoryFindingSourcesByRepoAndUserRow, error)
-	ListLatestRepositoryFindingsByRepoAndUser(ctx context.Context, arg ListLatestRepositoryFindingsByRepoAndUserParams) ([]RepositoryScanFinding, error)
+	ListLatestRepositoryFindingsByRepoAndUser(ctx context.Context, arg ListLatestRepositoryFindingsByRepoAndUserParams) ([]ListLatestRepositoryFindingsByRepoAndUserRow, error)
 	ListLatestRepositoryScanRunByRepo(ctx context.Context, repositoryID int64) ([]RepositoryScanRun, error)
 	ListLatestServiceStatusSnapshots(ctx context.Context) ([]ServiceStatusSnapshot, error)
 	ListPoliciesByUser(ctx context.Context, userID int64) ([]ListPoliciesByUserRow, error)
@@ -69,7 +70,7 @@ type Querier interface {
 	ListRepositoryDependenciesDetailed(ctx context.Context, repositoryID int64) ([]ListRepositoryDependenciesDetailedRow, error)
 	ListRepositoryDependencyFiles(ctx context.Context, repositoryID int64) ([]RepositoryDependencyFile, error)
 	ListRepositoryScanFindingSourcesByRunAndUser(ctx context.Context, arg ListRepositoryScanFindingSourcesByRunAndUserParams) ([]ListRepositoryScanFindingSourcesByRunAndUserRow, error)
-	ListRepositoryScanFindingsByRunAndUser(ctx context.Context, arg ListRepositoryScanFindingsByRunAndUserParams) ([]RepositoryScanFinding, error)
+	ListRepositoryScanFindingsByRunAndUser(ctx context.Context, arg ListRepositoryScanFindingsByRunAndUserParams) ([]ListRepositoryScanFindingsByRunAndUserRow, error)
 	ListRepositoryScanLogsByRunAndUser(ctx context.Context, arg ListRepositoryScanLogsByRunAndUserParams) ([]RepositoryScanLog, error)
 	ListRepositoryScanRunsByRepoAndUser(ctx context.Context, arg ListRepositoryScanRunsByRepoAndUserParams) ([]ListRepositoryScanRunsByRepoAndUserRow, error)
 	ListRepositoryScanRunsByUser(ctx context.Context, userID int64) ([]ListRepositoryScanRunsByUserRow, error)
@@ -99,6 +100,7 @@ type Querier interface {
 	UpsertRepository(ctx context.Context, arg UpsertRepositoryParams) error
 	UpsertRepositoryDependency(ctx context.Context, arg UpsertRepositoryDependencyParams) error
 	UpsertRepositoryDependencyFile(ctx context.Context, arg UpsertRepositoryDependencyFileParams) error
+	UpsertRepositoryFindingOccurrence(ctx context.Context, arg UpsertRepositoryFindingOccurrenceParams) error
 	UpsertUserGitHubInstallation(ctx context.Context, arg UpsertUserGitHubInstallationParams) error
 	UpsertUserOAuthToken(ctx context.Context, arg UpsertUserOAuthTokenParams) error
 }
