@@ -59,18 +59,38 @@ git clone git@github.com:chann44/TGE.git
 cd TGE
 
 cp .env.example .env
-# set TGE_BACKEND_IMAGE and TGE_WEB_IMAGE in your shell or .env if needed
 docker compose -f deployments/selfhost.compose.yml up -d
 ```
 
 Web UI: `http://localhost:3000`
 API: `http://localhost:8080`
 
-If you publish images to your own registry, set:
+If those ports are already used, set `WEB_PORT` / `API_PORT` in `.env` before startup.
+
+Default images used by compose:
+
+```bash
+chann44/tge-backend:latest
+chann44/tge-web:latest
+```
+
+To publish updated images to Docker Hub:
+
+```bash
+docker login
+make docker-build
+make docker-push
+```
+
+Automated publish is also configured via GitHub Actions in `.github/workflows/docker-publish.yml`.
+Push a tag like `v1.0.0` to publish multi-arch images to Docker Hub.
+
+To use another registry/image name, override:
 
 ```bash
 export TGE_BACKEND_IMAGE=your-registry/your-namespace/tge-backend:latest
 export TGE_WEB_IMAGE=your-registry/your-namespace/tge-web:latest
+docker compose -f deployments/selfhost.compose.yml up -d
 ```
 
 For system-health log streaming, set these `.env` values:

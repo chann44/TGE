@@ -2,8 +2,8 @@ SHELL := /bin/sh
 
 GOOSE_DIR := sql/migrations
 SQLC_CONFIG := sqlc.yaml
-BACKEND_IMAGE ?= ghcr.io/chann44/tge-backend:latest
-WEB_IMAGE ?= ghcr.io/chann44/tge-web:latest
+BACKEND_IMAGE ?= chann44/tge-backend:latest
+WEB_IMAGE ?= chann44/tge-web:latest
 
 .PHONY: help api-dev worker-dev scheduler-dev web-dev dev test fmt codegen migrate-up migrate-down migrate-status migrate-reset migrate-create docker-build-backend docker-build-web docker-push-backend docker-push-web docker-build docker-push
 

@@ -47,7 +47,7 @@ services:
       - tge_net
 
   migrate:
-    image: ${TGE_BACKEND_IMAGE:-ghcr.io/chann44/tge-backend:latest}
+    image: ${TGE_BACKEND_IMAGE:-chann44/tge-backend:latest}
     restart: "no"
     env_file:
       - ../.env
@@ -62,7 +62,7 @@ services:
       - tge_net
 
   api:
-    image: ${TGE_BACKEND_IMAGE:-ghcr.io/chann44/tge-backend:latest}
+    image: ${TGE_BACKEND_IMAGE:-chann44/tge-backend:latest}
     restart: unless-stopped
     env_file:
       - ../.env
@@ -87,12 +87,12 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "8080:8080"
+      - "${API_PORT:-8080}:8080"
     networks:
       - tge_net
 
   worker:
-    image: ${TGE_BACKEND_IMAGE:-ghcr.io/chann44/tge-backend:latest}
+    image: ${TGE_BACKEND_IMAGE:-chann44/tge-backend:latest}
     restart: unless-stopped
     env_file:
       - ../.env
@@ -111,7 +111,7 @@ services:
       - tge_net
 
   scheduler:
-    image: ${TGE_BACKEND_IMAGE:-ghcr.io/chann44/tge-backend:latest}
+    image: ${TGE_BACKEND_IMAGE:-chann44/tge-backend:latest}
     restart: unless-stopped
     env_file:
       - ../.env
@@ -130,7 +130,7 @@ services:
       - tge_net
 
   web:
-    image: ${TGE_WEB_IMAGE:-ghcr.io/chann44/tge-web:latest}
+    image: ${TGE_WEB_IMAGE:-chann44/tge-web:latest}
     restart: unless-stopped
     environment:
       API_BASE_URL: http://api:8080
@@ -138,7 +138,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     networks:
       - tge_net
 
