@@ -23,6 +23,7 @@ type Querier interface {
 	CountRepositoryScansFailedSince(ctx context.Context, finishedAt pgtype.Timestamptz) (int64, error)
 	CountRepositoryScansSuccessSince(ctx context.Context, finishedAt pgtype.Timestamptz) (int64, error)
 	CreateCustomDomain(ctx context.Context, arg CreateCustomDomainParams) (CustomDomain, error)
+	CreateIntegrationActivity(ctx context.Context, arg CreateIntegrationActivityParams) error
 	CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Policy, error)
 	CreatePolicyCustomSource(ctx context.Context, arg CreatePolicyCustomSourceParams) error
 	CreatePolicyTrigger(ctx context.Context, arg CreatePolicyTriggerParams) error
@@ -43,6 +44,7 @@ type Querier interface {
 	GetDependencyPackageByKey(ctx context.Context, arg GetDependencyPackageByKeyParams) (DependencyPackage, error)
 	GetDependencyPackageVersionByPackageAndVersion(ctx context.Context, arg GetDependencyPackageVersionByPackageAndVersionParams) (DependencyPackageVersion, error)
 	GetFindingByIDAndUser(ctx context.Context, arg GetFindingByIDAndUserParams) (GetFindingByIDAndUserRow, error)
+	GetIntegrationByProviderAndUser(ctx context.Context, arg GetIntegrationByProviderAndUserParams) (Integration, error)
 	GetPolicyByIDAndUser(ctx context.Context, arg GetPolicyByIDAndUserParams) (Policy, error)
 	GetPolicyRegistryByPolicy(ctx context.Context, policyID int64) (PolicyRegistry, error)
 	GetPolicySastByPolicy(ctx context.Context, policyID int64) (PolicySast, error)
@@ -58,6 +60,8 @@ type Querier interface {
 	ListActiveRepositoryDependencySync(ctx context.Context, repositoryID int64) ([]RepositoryDependencySync, error)
 	ListDependencyEdgesByFromVersion(ctx context.Context, fromVersionID int64) ([]ListDependencyEdgesByFromVersionRow, error)
 	ListFindingsByUser(ctx context.Context, userID int64) ([]ListFindingsByUserRow, error)
+	ListIntegrationActivitiesByUser(ctx context.Context, arg ListIntegrationActivitiesByUserParams) ([]IntegrationActivity, error)
+	ListIntegrationsByUser(ctx context.Context, userID int64) ([]Integration, error)
 	ListLatestRepositoryDependencySync(ctx context.Context, repositoryID int64) ([]RepositoryDependencySync, error)
 	ListLatestRepositoryFindingSourcesByRepoAndUser(ctx context.Context, arg ListLatestRepositoryFindingSourcesByRepoAndUserParams) ([]ListLatestRepositoryFindingSourcesByRepoAndUserRow, error)
 	ListLatestRepositoryFindingsByRepoAndUser(ctx context.Context, arg ListLatestRepositoryFindingsByRepoAndUserParams) ([]ListLatestRepositoryFindingsByRepoAndUserRow, error)
@@ -89,11 +93,13 @@ type Querier interface {
 	MarkRepositoryScanRunSuccess(ctx context.Context, arg MarkRepositoryScanRunSuccessParams) error
 	SetPolicyEnabledByIDAndUser(ctx context.Context, arg SetPolicyEnabledByIDAndUserParams) (Policy, error)
 	UnassignPolicyFromRepository(ctx context.Context, repositoryID int64) error
+	UpdateIntegrationStatus(ctx context.Context, arg UpdateIntegrationStatusParams) error
 	UpdatePolicyByIDAndUser(ctx context.Context, arg UpdatePolicyByIDAndUserParams) (Policy, error)
 	UpsertDependencyPackage(ctx context.Context, arg UpsertDependencyPackageParams) (DependencyPackage, error)
 	UpsertDependencyPackageVersion(ctx context.Context, arg UpsertDependencyPackageVersionParams) (DependencyPackageVersion, error)
 	UpsertDependencyVersionDependency(ctx context.Context, arg UpsertDependencyVersionDependencyParams) error
 	UpsertGitHubUser(ctx context.Context, arg UpsertGitHubUserParams) (User, error)
+	UpsertIntegration(ctx context.Context, arg UpsertIntegrationParams) (Integration, error)
 	UpsertPolicyRegistry(ctx context.Context, arg UpsertPolicyRegistryParams) error
 	UpsertPolicySast(ctx context.Context, arg UpsertPolicySastParams) error
 	UpsertPolicySources(ctx context.Context, arg UpsertPolicySourcesParams) error

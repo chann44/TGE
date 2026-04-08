@@ -26,6 +26,13 @@ func registerRoutes(r chi.Router, h *Handler) {
 		r.Group(func(r chi.Router) {
 			r.Use(h.authMiddleware)
 			r.Get("/me", h.me)
+			r.Get("/integrations", h.listIntegrations)
+			r.Get("/integrations/activities", h.listIntegrationActivities)
+			r.Get("/integrations/{provider}", h.getIntegration)
+			r.Put("/integrations/{provider}/connect", h.connectIntegration)
+			r.Post("/integrations/linear/teams", h.listLinearTeams)
+			r.Post("/integrations/{provider}/messages", h.sendIntegrationMessage)
+			r.Post("/integrations/{provider}/issues", h.createIntegrationIssue)
 			r.Get("/policies", h.listPolicies)
 			r.Post("/policies", h.createPolicy)
 			r.Get("/policies/{policyID}", h.getPolicy)

@@ -191,6 +191,32 @@ type DependencyVersionDependency struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Integration struct {
+	ID          int64              `json:"id"`
+	UserID      int64              `json:"user_id"`
+	Provider    string             `json:"provider"`
+	Name        string             `json:"name"`
+	Status      string             `json:"status"`
+	Enabled     bool               `json:"enabled"`
+	Config      []byte             `json:"config"`
+	ConnectedAt pgtype.Timestamptz `json:"connected_at"`
+	LastError   string             `json:"last_error"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type IntegrationActivity struct {
+	ID            int64              `json:"id"`
+	UserID        int64              `json:"user_id"`
+	IntegrationID pgtype.Int8        `json:"integration_id"`
+	Provider      string             `json:"provider"`
+	Action        string             `json:"action"`
+	Status        string             `json:"status"`
+	Detail        string             `json:"detail"`
+	Metadata      []byte             `json:"metadata"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type Policy struct {
 	ID        int64              `json:"id"`
 	UserID    int64              `json:"user_id"`

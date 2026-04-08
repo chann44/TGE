@@ -46,6 +46,37 @@ CREATE TABLE IF NOT EXISTS user_github_installations (
     UNIQUE (user_id, installation_id)
 );
 
+CREATE TABLE IF NOT EXISTS integrations (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'connected',
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    config JSONB NOT NULL DEFAULT '{}'::JSONB,
+    connected_at TIMESTAMPTZ,
+    last_error TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, provider),
+    CHECK (provider IN ('github', 'slack', 'jira', 'linear', 'discord')),
+    CHECK (status IN ('connected', 'error', 'disconnected'))
+);
+
+CREATE TABLE IF NOT EXISTS integration_activities (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    integration_id BIGINT REFERENCES integrations(id) ON DELETE SET NULL,
+    provider TEXT NOT NULL,
+    action TEXT NOT NULL,
+    status TEXT NOT NULL,
+    detail TEXT NOT NULL DEFAULT '',
+    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (provider IN ('github', 'slack', 'jira', 'linear', 'discord')),
+    CHECK (status IN ('success', 'failed'))
+);
+
 CREATE TABLE IF NOT EXISTS custom_domains (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -391,6 +422,12 @@ ON policy_source_custom (policy_id);
 
 CREATE INDEX IF NOT EXISTS custom_domains_user_id_idx
 ON custom_domains (user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS integrations_user_id_idx
+ON integrations (user_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS integration_activities_user_id_idx
+ON integration_activities (user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS service_status_snapshots (
     id BIGSERIAL PRIMARY KEY,

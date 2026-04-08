@@ -24,6 +24,7 @@
 		{ href: '/policies', label: 'Policies', icon: PolicyIcon },
 		{ href: '/dependencies', label: 'Dependencies', icon: PackageIcon },
 		{ href: '/scans', label: 'Scans', icon: ScanIcon },
+		{ href: '/integrations', label: 'Integrations', icon: Settings01Icon },
 		{ href: '/settings', label: 'Settings', icon: Settings01Icon },
 		{ href: '/system-health', label: 'System Health', icon: ServerStack01Icon }
 	] as const;
@@ -36,7 +37,7 @@
 	<Sidebar.Root variant="inset" collapsible="icon">
 		<Sidebar.Header>
 			<div class="rounded-md border border-sidebar-border bg-sidebar-accent px-3 py-2">
-				<p class="text-sm font-bold tracking-tight text-primary">TGE</p>
+				<p class="text-sm font-bold tracking-tight text-primary">Arrakis</p>
 			</div>
 		</Sidebar.Header>
 
