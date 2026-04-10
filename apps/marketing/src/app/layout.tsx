@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { RootProvider } from "fumadocs-ui/provider/next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -25,14 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body suppressHydrationWarning>
-        <RootProvider
-          theme={{
-            defaultTheme: "dark",
-            forcedTheme: "dark",
-          }}
-        >
-          {children}
-        </RootProvider>
+        {children}
       </body>
     </html>
   );
